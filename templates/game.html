@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Play Hangman!</title>
+    <script src="static/js/gamescripts.js"></script>
+    <script src="static/js/utils.js"></script>
+    <link rel="stylesheet" type="text/css" href="static/main.css">
+</head>
+<body>
+
+<div class="center_all">
+    <div class="big_titles">You are playing Hangman!</div>
+    <div class="v_space"></div>
+    <div><b>Current progress:</b></div>
+    <div id="letters">
+        {% for item in current_blanks %}
+        <div class="cell">
+            <div class="letter_blank">{{ item }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="v_space"></div>
+    <div id="number_wrong"><b>{{ current_wrong_guesses|length|string }}</b>&nbsp;wrong guesses (max 8)</div>
+    <div id="wrong_guesses">
+        {% for item in current_wrong_guesses %}
+        <div class="cell">
+            <div class="wrong_guess">{{ item }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="v_space"></div>
+    <div>
+        <input class="letter_guess" type="text" maxlength="1" />
+        <button onclick="guess ( '.letter_guess', 'letter' )">Guess Letter</button>
+    </div>
+    <div class="v_space"></div>
+    <div>
+        <input class="word_guess" type="text" />
+        <button onclick="guess ( '.word_guess', 'word' )">Guess Word</button>
+    </div>
+
+    <div class="small_bold_error">You may only guess a whole word once per game!</div>
+    <div class="v_space"></div>
+    <div class="undo_btn" onclick="undo()">Undo</div>
+</div>
+
+</body>
+</html>

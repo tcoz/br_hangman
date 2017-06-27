@@ -1,0 +1,87 @@
+* {
+    font-size: 14px;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+}
+
+.big_titles {
+    width: 100%;
+    text-align: center;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.start_btn, .undo_btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 150px;
+    height: 75px;
+    font-weight: bold;
+    margin: auto;
+    color: white;
+    border: 2px solid darkgrey;
+    border-radius: 5px 5px 5px 5px;
+}
+
+.start_btn {
+    background-color: darkgreen;
+}
+
+.start_btn:hover {
+    background-color: green;
+}
+
+.undo_btn {
+    background-color: darkblue;
+}
+
+.undo_btn:hover {
+    background-color: blue;
+}
+
+.error {
+    width: 100%;
+    color: darkred;
+    text-align: center;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.cell {
+    display: table-cell;
+    padding: 5px;
+}
+
+.letter_blank, .wrong_guess {
+    width: 20px;
+    height: 20px;
+    text-align: center;
+}
+
+.letter_blank {
+    border-bottom: 2px solid darkgreen;
+}
+
+.wrong_guess, .gameloss {
+    color: darkred;
+}
+
+.gamewon {
+    color: darkgreen;
+}
+
+.small_bold_error {
+    font-size: 10px;
+    font_weight: bold;
+    color: darkred;
+}
+
+.v_space {
+    height: 20px;
+}
+
+.center_all > div {
+    display: flex;
+    justify-content: center;
+}
