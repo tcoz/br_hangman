@@ -143,7 +143,7 @@ def guess_letter ():
         if len(iscomplete) == 0:
             ''' If no more words, game is done, user wins'''
             if len ( game.word_list ) == 0:
-                payload = json.dumps ( { "gamestatus": WIN } );
+                return json.dumps ( { "gamestatus": WIN } );
             else:
                 word_complete = WIN
                 game.nextword()
@@ -153,7 +153,7 @@ def guess_letter ():
         ''' If eight wrong guesses, game over '''
         if len(game.current_wrong_guesses) == MAX_GUESSES:
             game.complete = True
-            payload = json.dumps({"gamestatus": LOSS})
+            return json.dumps({"gamestatus": LOSS})
 
     move = Move(copy(game.word_list),
                 game.current_word,
@@ -196,7 +196,7 @@ def guess_word ():
     ''' If no more words, game is done, user wins '''
     if len(game.word_list) == 0:
         game.complete = True
-        return  json.dumps({"gamestatus": WIN});
+        return json.dumps({"gamestatus": WIN});
     elif word_complete == WIN:
         game.nextword()
 
@@ -222,6 +222,8 @@ def guess_word ():
 def undo_move ():
     game_id = request.args.get ( ID_FIELD )
     game = get_game ( game_id )
+    move_time = ( 0 if len ( game.undo_stack ) == 0
+                  else game.undo_stack [ len ( game.undo_stack ) - 1 ].created )
 
     if len ( game.undo_stack ) > 1:
         game.undo_stack.pop()
@@ -235,7 +237,9 @@ def undo_move ():
 
     json_blanks = json.dumps(game.current_blanks)
     json_wrong_guesses = json.dumps(game.current_wrong_guesses)
-    payload = json.dumps ( { "blanks": json_blanks, "wrong": json_wrong_guesses } )
+    payload = json.dumps ( { "blanks": json_blanks,
+                             "wrong": json_wrong_guesses,
+                             "movetime": str ( move_time ) } )
 
     return payload
 

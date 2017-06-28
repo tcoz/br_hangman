@@ -67,6 +67,10 @@ function executeUndo ( data ) {
     refreshLetters ( blanks );
     refreshWrongGuesses ( wrong );
     refreshNumberWrong ( wrong.length );
+
+    let id = getQueryStringValue ( 'id' );
+    let new_state = `?id=${id}&mid=${data.movetime}`;
+    pushURLState ( new_state );
 }
 
 /**
