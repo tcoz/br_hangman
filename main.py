@@ -31,6 +31,7 @@ GAME_OVER_TEMPLATE = "gameover.html"
 ID_FIELD = "id"
 WORD_FIELD = "word"
 LETTER_FIELD = "letter"
+MOVETIME_FIELD = 'mid'
 LOSS = 0
 WIN = 1
 WORD_GUESS_USED = 2
@@ -59,12 +60,27 @@ def new_game ():
 ''' Called after a new game is created, or a user branches an existing game '''
 @app.route ( "/rungame" )
 def run_game ():
-    game_id = request.args.get ( ID_FIELD )
+    game_id = 0
+    move_time = 0
+
+    try:
+        game_id = request.args.get ( ID_FIELD )
+    except StandardError:
+        return render_template ( ERROR_TEMPLATE, error = "Invalid Game URL" )
+
+    try:
+        move_time = int ( str ( request.args.get ( MOVETIME_FIELD ) ) )
+    except StandardError:
+        print ">>>>>> No move time for game, will not bramch"
+
     game = get_game ( game_id )
 
+    if game is None:
+        return render_template(ERROR_TEMPLATE, error="Could not find game with id" + game_id )
+
     ''' If the game is already in progress, the user is branching it '''
-    if game.inprogress and not game.complete:
-        branched_id = branch_game ( game )
+    if move_time > 0 and game.inprogress:
+        branched_id = branch_game ( game, move_time )
         return redirect(RUNGAME_REDIRECT + branched_id)
 
     if game is None:
@@ -77,23 +93,32 @@ def run_game ():
 
 
 ''' When a user accesses a URL for an existin game, copy the state and create a new instance '''
-def branch_game ( game ):
+def branch_game ( game, move_time ):
+
     ''' If user starts game from inprogress game, branch it, set new id, etc. '''
     branched_id = gameutils.gen_unique_id ()
-    word_list = copy ( game.word_list )
-    ''' Shuffle words again, or user can finish branched game by looking at first '''
+
+    ''' prune the undo stack to the indicated time '''
+    undo_stack = filter ( lambda x: x.created <= move_time, game.undo_stack )
+
+    ''' get last move of the stack, use it to set up the game state '''
+    last_move = undo_stack [ len ( undo_stack  ) - 1 ]
+
+    word_list = copy ( last_move.word_list )
+
+    ''' Shuffle remaining words, or user can finish branched game by looking at first '''
     random.shuffle ( word_list )
 
     branched_game = HangmanGame(game_id=branched_id, word_list=word_list)
-    branched_game.undo_stack = copy ( game.undo_stack )
-    branched_game.created = datetime.datetime.utcnow ()
-    branched_game.current_word = game.current_word
-    branched_game.current_blanks = copy ( game.current_blanks )
-    branched_game.current_wrong_guesses = copy ( game.current_wrong_guesses )
+    branched_game.undo_stack = undo_stack
+    branched_game.created = gameutils.gen_timestamp ()
+    branched_game.current_word = last_move.current_word
+    branched_game.current_blanks = copy ( last_move.current_blanks )
+    branched_game.current_wrong_guesses = copy ( last_move.current_wrong_guesses )
+    branched_game.complete = last_move.game_complete
+    branched_game.inprogress = False
     ''' Give the branched user another word guess '''
     branched_game.word_guess_used = False
-    branched_game.complete = game.complete
-    branched_game.inprogress = False
 
     games.append ( branched_game )
     return branched_id
@@ -118,7 +143,7 @@ def guess_letter ():
         if len(iscomplete) == 0:
             ''' If no more words, game is done, user wins'''
             if len ( game.word_list ) == 0:
-                return json.dumps ( { "gamestatus": WIN } );
+                payload = json.dumps ( { "gamestatus": WIN } );
             else:
                 word_complete = WIN
                 game.nextword()
@@ -128,16 +153,22 @@ def guess_letter ():
         ''' If eight wrong guesses, game over '''
         if len(game.current_wrong_guesses) == MAX_GUESSES:
             game.complete = True
-            return json.dumps({"gamestatus": LOSS})
+            payload = json.dumps({"gamestatus": LOSS})
 
-    move = Move(copy(game.word_list), game.current_word,
-                copy(game.current_blanks), copy(game.current_wrong_guesses))
+    move = Move(copy(game.word_list),
+                game.current_word,
+                copy(game.current_blanks),
+                copy(game.current_wrong_guesses),
+                game.complete)
 
     game.undo_stack.append(move)
 
     json_blanks = json.dumps(game.current_blanks)
     json_wrong_guesses = json.dumps(game.current_wrong_guesses)
-    payload = json.dumps({"blanks": json_blanks, "wrong": json_wrong_guesses, "wordcomplete" : word_complete })
+    payload = json.dumps( {"blanks": json_blanks,
+                           "wrong": json_wrong_guesses,
+                           "wordcomplete" : word_complete,
+                           "movetime" : str ( move.created ) })
     return payload
 
 
@@ -165,18 +196,24 @@ def guess_word ():
     ''' If no more words, game is done, user wins '''
     if len(game.word_list) == 0:
         game.complete = True
-        return json.dumps({"gamestatus": WIN});
+        return  json.dumps({"gamestatus": WIN});
     elif word_complete == WIN:
         game.nextword()
 
-    move = Move(copy(game.word_list), game.current_word,
-                copy(game.current_blanks), copy(game.current_wrong_guesses))
+    move = Move(copy(game.word_list),
+                game.current_word,
+                copy(game.current_blanks),
+                copy(game.current_wrong_guesses),
+                game.complete )
 
     game.undo_stack.append(move)
 
     json_blanks = json.dumps(game.current_blanks)
     json_wrong_guesses = json.dumps(game.current_wrong_guesses)
-    payload = json.dumps({"blanks": json_blanks, "wrong": json_wrong_guesses, "wordcomplete" : word_complete })
+    payload = json.dumps({"blanks": json_blanks,
+                          "wrong": json_wrong_guesses,
+                          "wordcomplete" : word_complete,
+                          "movetime" : str ( move.created ) })
     return payload
 
 
@@ -214,9 +251,11 @@ def get_game ( game_id ):
 
     return filtered_by_id [ 0 ]
 
+
 ''' Find all instances of a character in a string (used to check letter guesses) '''
 def find_char_indexes ( s, ch ):
     return [ i for i, ltr in enumerate ( s ) if ltr == ch ]
+
 
 
 ''' Execute App '''

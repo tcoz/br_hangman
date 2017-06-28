@@ -1,11 +1,19 @@
+ /**
+   * Update url to reflect current state
+   */
+ function pushURLState ( newurl ) {
+    newurl += '';
+ 	window.history.replaceState ( {}, 'Hangman Game', newurl );
+ }
+
 /**
   * Called when user clicks Letter or Word guess
   * selector: id of desired element to get guess value from
   * guess_type: letter, or word
 */
 function guess ( selector, guess_type ) {
-    var elem = document.querySelector ( selector );
-    var guess = elem.value + '';
+    let elem = document.querySelector ( selector );
+    let guess = elem.value + '';
 
     if ( ! guess ) {
         alert ( 'Please enter a one-letter guess!' );
@@ -15,25 +23,8 @@ function guess ( selector, guess_type ) {
     // Clear the guess so user doesn't have to backspace etc.
     elem.value = '';
 
-    var xmlhttp = new XMLHttpRequest();
-    xmlhttp.onreadystatechange = function() {
-
-        if (xmlhttp.readyState == XMLHttpRequest.DONE ) {
-
-           if (xmlhttp.status == 200) {
-                executeGuess ( xmlhttp.responseText );
-           }
-           else if (xmlhttp.status == 400) {
-              alert ( 'There was an error 400' );
-           }
-           else {
-               alert ( 'Something else other than 200 was returned' );
-           }
-        }
-    }.bind ( this );
-
-    var game_id = getQueryStringValue ( 'id' );
-    var url = '';
+    let game_id = getQueryStringValue ( 'id' );
+    let url = '';
     switch ( guess_type ) {
         case 'letter':
             url = 'guessletter?id=' + game_id + '&letter=' + guess;
@@ -43,38 +34,23 @@ function guess ( selector, guess_type ) {
             break;
     }
 
-
-    xmlhttp.open ( "GET", url, true );
-    xmlhttp.send ();
+    callHTTP ( url ).then (
+        x => executeGuess ( x ),
+        err => console.error ( 'gamescripts::guess', err )
+    );
 }
 
 /**
   * Called when user clicks Undo
 */
 function undo () {
+    let game_id = getQueryStringValue ( 'id' );
+    let url = 'undomove?id=' + game_id;
 
-    var xmlhttp = new XMLHttpRequest();
-    xmlhttp.onreadystatechange = function() {
-
-        if (xmlhttp.readyState == XMLHttpRequest.DONE ) {
-
-           if (xmlhttp.status == 200) {
-                executeUndo ( xmlhttp.responseText );
-           }
-           else if (xmlhttp.status == 400) {
-              alert ( 'There was an error 400' );
-           }
-           else {
-               alert ( 'Something else other than 200 was returned' );
-           }
-        }
-    }.bind ( this );
-
-    var game_id = getQueryStringValue ( 'id' );
-    var url = 'undomove?id=' + game_id;
-
-    xmlhttp.open ( "GET", url, true );
-    xmlhttp.send ();
+    callHTTP ( url ).then (
+        x => executeUndo ( x ),
+        err => console.error ( 'gamescripts::undo', err )
+    );
 }
 
 /**
@@ -82,9 +58,8 @@ function undo () {
   * data: payload returned from remote http call
 */
 function executeUndo ( data ) {
-    var json = JSON.parse ( data );
-    var blanks = JSON.parse ( json.blanks );
-    var wrong = JSON.parse ( json.wrong );
+    let blanks = JSON.parse ( data.blanks );
+    let wrong = JSON.parse ( data.wrong );
 
     letters.innerHTML = '';
     wrong_guesses.innerHTML = '';
@@ -99,18 +74,17 @@ function executeUndo ( data ) {
   * data: payload returned from remote http call
 */
 function executeGuess ( data ) {
-    var json = JSON.parse ( data );
-    if ( json.hasOwnProperty ( 'gamestatus' ) ) {
-        endGame ( json.gamestatus );
-    } else if ( json.hasOwnProperty ( 'guesserror' )  && json.guesserror == 2 ) {
+    if ( data.hasOwnProperty ( 'gamestatus' ) ) {
+        endGame ( data.gamestatus );
+    } else if ( data.hasOwnProperty ( 'guesserror' )  && data.guesserror == 2 ) {
         alert ( 'Can only guess whole word once!' );
         return;
-     } else if ( json.wordcomplete == 3 ) {
+     } else if ( data.wordcomplete == 3 ) {
         alert ( 'Whole word guess incorrect!' );
         return;
     } else {
-        var blanks = JSON.parse ( json.blanks );
-        var wrong = JSON.parse ( json.wrong );
+        let blanks = JSON.parse ( data.blanks );
+        let wrong = JSON.parse ( data.wrong );
 
         letters.innerHTML = '';
         wrong_guesses.innerHTML = '';
@@ -120,10 +94,14 @@ function executeGuess ( data ) {
         refreshNumberWrong ( wrong.length );
 
         // Give user some indication they finished word
-        if ( json.wordcomplete == 1 ) {
+        if ( data.wordcomplete == 1 ) {
             alert ( "Word complete!" );
         }
     }
+    
+    let id = getQueryStringValue ( 'id' );
+    let new_state = `?id=${id}&mid=${data.movetime}`;
+    pushURLState ( new_state );
 }
 
 /**
@@ -131,20 +109,20 @@ function executeGuess ( data ) {
   * blanks: info to fill in to completed, or missing, letter spaces
 */
 function refreshLetters ( blanks ) {
-    var frag = document.createDocumentFragment ( );
-    var letters = document.querySelector ( '#letters' );
+    let frag = document.createDocumentFragment ( );
+    let letters = document.querySelector ( '#letters' );
 
     letters.innerHTML = '';
 
-    for ( var i = 0; i < blanks.length; i++ ) {
-        var cell = document.createElement ( 'div' );
+    blanks.forEach ( x => {
+        let cell = document.createElement ( 'div' );
         cell.className = 'cell';
-        var letter = document.createElement ( 'div' );
+        let letter = document.createElement ( 'div' );
         letter.className = 'letter_blank';
-        letter.innerText = blanks [ i ];
+        letter.innerText = x;
         cell.appendChild ( letter );
         frag.appendChild ( cell );
-    }
+    });
 
     letters.appendChild ( frag );
 }
@@ -154,20 +132,20 @@ function refreshLetters ( blanks ) {
   * guesses: wrong guess list returned from server
 */
 function refreshWrongGuesses ( guesses ) {
-    var frag = document.createDocumentFragment ( );
-    var wrong_guesses = document.querySelector ( '#wrong_guesses' );
+    let frag = document.createDocumentFragment ( );
+    let wrong_guesses = document.querySelector ( '#wrong_guesses' );
 
     wrong_guesses.innerHTML = '';
 
-    for ( var i = 0; i < guesses.length; i++ ) {
-        var cell = document.createElement ( 'div' );
+    guesses.forEach ( x => {
+        let cell = document.createElement ( 'div' );
         cell.className = 'cell';
-        var wrong_guess = document.createElement ( 'div' );
+        let wrong_guess = document.createElement ( 'div' );
         wrong_guess.className = 'wrong_guess';
-        wrong_guess.innerText = guesses [ i ];
+        wrong_guess.innerText = x;
         cell.appendChild ( wrong_guess );
         frag.appendChild ( cell );
-    }
+    });
 
     wrong_guesses.appendChild ( frag );
 }
@@ -177,7 +155,7 @@ function refreshWrongGuesses ( guesses ) {
   * num: length of current wrong guess list
 */
 function refreshNumberWrong ( num ) {
-    var elem = document.querySelector ( '#number_wrong' );
+    let elem = document.querySelector ( '#number_wrong' );
     elem.innerHTML = '<b>' + num + '</b>&nbsp;wrong guesses (max 8)';
 }
 
@@ -195,7 +173,7 @@ function endGame ( status ) {
   * msg: text to show user based on status.
 */
 function loadGameOverMessage ( css_class, msg ) {
-    var gamestatus = getQueryStringValue ( "gamestatus" );
+    let gamestatus = getQueryStringValue ( "gamestatus" );
     switch ( gamestatus ) {
         case "0":
             css_class ='gameloss';
@@ -211,8 +189,8 @@ function loadGameOverMessage ( css_class, msg ) {
             break;
     }
 
-    var elem = document.querySelector ( '#game_over_message' );
-    var display = document.createElement ( 'div' );
+    let elem = document.querySelector ( '#game_over_message' );
+    let display = document.createElement ( 'div' );
     display.className = css_class;
     display.innerText = msg;
     elem.appendChild ( display );

@@ -1,4 +1,5 @@
-import datetime
+import time
+import gameutils
 
 ''' Class that represents a game and its state '''
 class HangmanGame:
@@ -7,7 +8,7 @@ class HangmanGame:
         self.game_id = game_id
         self.word_list = word_list
         self.undo_stack = []
-        self.created = datetime.datetime.utcnow ( )
+        self.created = gameutils.gen_timestamp()
         self.current_word = self.select_word ( )
         self.current_blanks = [ "_" ] * len ( self.current_word )
         self.current_wrong_guesses = []
@@ -31,8 +32,10 @@ class HangmanGame:
 ''' Populates the undo_stack in a HangmanGame '''
 class Move:
 
-    def __init__ ( self, word_list, current_word, current_blanks, current_wrong_guesses ):
+    def __init__ ( self, word_list, current_word, current_blanks, current_wrong_guesses, game_complete ):
         self.word_list = word_list
         self.current_word = current_word
         self.current_blanks = current_blanks
         self.current_wrong_guesses = current_wrong_guesses
+        self.created = gameutils.gen_timestamp()
+        self.game_complete = game_complete

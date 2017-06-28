@@ -31,12 +31,14 @@
     </div>
     <div class="v_space"></div>
     <div>
-        <input class="letter_guess" type="text" maxlength="1" />
+        <input class="letter_guess" type="text" maxlength="1"
+               onkeyup="checkEnter ( event, '.letter_guess', 'letter' )" />
         <button onclick="guess ( '.letter_guess', 'letter' )">Guess Letter</button>
     </div>
     <div class="v_space"></div>
     <div>
-        <input class="word_guess" type="text" />
+        <input class="word_guess" type="text"
+                onkeyup="checkEnter ( event, '.word_guess', 'word' )" />
         <button onclick="guess ( '.word_guess', 'word' )">Guess Word</button>
     </div>
 
@@ -44,6 +46,14 @@
     <div class="v_space"></div>
     <div class="undo_btn" onclick="undo()">Undo</div>
 </div>
+
+<script>
+    function checkEnter ( evt, css_style, guess_type ) {
+        if ( evt.keyCode === 13 ) {
+            guess ( css_style, guess_type )
+        }
+    }
+</script>
 
 </body>
 </html>
