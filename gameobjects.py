@@ -17,7 +17,7 @@ class HangmanGame:
         self.inprogress = False
 
     def select_word ( self ):
-        new_word = self.word_list.pop ( )
+        new_word = str ( self.word_list.pop () ).upper ()
         return new_word
 
     def reset ( self ):
@@ -26,7 +26,7 @@ class HangmanGame:
 
     def nextword ( self ):
         self.reset ( )
-        self.current_word = self.select_word ( )
+        self.current_word = self.select_word ()
         self.current_blanks = ["_"] * len(self.current_word)
 
 ''' Populates the undo_stack in a HangmanGame '''
